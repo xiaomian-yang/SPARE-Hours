@@ -1,0 +1,184 @@
+<html>
+	<head>
+		<title>SPARE Sign In: </title>
+		<script>
+			const {ipcRenderer} = require('electron');
+
+			function check() {
+				if (getVolunteerType() == "recycling") {
+					document.getElementById('beautification-control').style = 'display: none'
+					document.getElementById('recycling-control').style = 'display: block'
+				} else if (getVolunteerType() == "beautification"){
+					document.getElementById('beautification-control').style = 'display: block'
+					document.getElementById('recycling-control').style = 'display: none'
+				}
+			}
+
+
+			function submit() {
+				alert(document.getElementById('signin-textbox').value);
+			}
+
+			function getVolunteerType() {
+				var radios = document.getElementsByName('volunteer-type');
+
+				for (var i = 0, length = radios.length; i < length; i++)
+				{
+				 if (radios[i].checked)
+				 {
+				  	// do whatever you want with the checked radio
+				  	return radios[i].value;
+
+				  // only one radio can be logically checked, don't check the rest
+				  break;
+				 }
+				}
+			}
+
+			function status(status) {
+				var type = getVolunteerType();
+				if (type == "recycling"){
+					const reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
+						"id" : document.getElementById('signin-textbox').value, "status" : status})
+					console.log(reply)
+				} else if (type == "beautification") {
+					const reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
+						"id" : document.getElementById('signin-textbox').value, "minute" : document.getElementById('minute-textbox').value})
+					console.log(reply)
+				}
+			}
+
+
+
+			function getHours() {
+				//window.open('', 'Hours');
+				//table.style.width = '100%'
+				//table.setAttribute('border', '1')
+				var table = document.getElementById("hourstable-body")
+
+				if (document.getElementById('volunteer-hours').value == "show"){
+					const reply = ipcRenderer.sendSync('getHours', {"id" : document.getElementById('signin-textbox').value})
+					console.log(`reply.length ${reply.length}`)
+
+					var total = 0;
+					table.innerHTML = '';
+					for(var rec of reply) {
+
+						minute = estimateHours(rec.minute)
+						total += minute;
+						var row = document.createElement("tr")
+
+						var volunteerType = document.createElement("td")
+						var date = document.createElement("td")
+						var hours = document.createElement("td")
+
+						var cellVolunteerType = document.createTextNode(`${rec.project}`)
+						volunteerType.appendChild(cellVolunteerType)
+						var cellDate = document.createTextNode(`${findDate(rec.date)}`)
+						date.appendChild(cellDate)
+						var cellHours = document.createTextNode(`${minute}`)
+						hours.appendChild(cellHours)
+
+						row.appendChild(volunteerType)
+						row.appendChild(date)
+						row.appendChild(hours)
+
+						table.appendChild(row)
+
+
+					}
+					var row = document.createElement("tr")
+					var totalString = document.createElement("td")
+					totalString.appendChild(document.createTextNode("Total Minutes"))
+					var nothing = document.createElement("td")
+					nothing.appendChild(document.createTextNode(""))
+					var totalNumber = document.createElement("td")
+					totalNumber.appendChild(document.createTextNode(`${total}`))
+
+					row.appendChild(totalString)
+					row.appendChild(nothing)
+					row.appendChild(totalNumber)
+
+					table.appendChild(row)
+
+					table.style="display:block"
+					document.getElementById('volunteer-hours').innerHTML = "close hours table"
+					document.getElementById('volunteer-hours').value = "hide"
+				} else {
+					table.style = 'display: none'
+					document.getElementById('volunteer-hours').innerHTML = "volunteer hours"
+					document.getElementById('volunteer-hours').value = "show"
+				}
+
+					for (var attr in rec) {
+	          console.log(`${attr}: ${rec[attr]}`)
+	        }
+			}
+
+			function estimateHours(minute) {
+			  return Math.round(minute)
+			}
+
+			function findDate(seconds) {
+				return new Date(seconds * 1000).toString().slice(0, 24)
+			}
+
+			function changeDirectory() {
+				if (document.getElementById('volunteer-officer').value == 'display officer') {
+					document.getElementById('volunteer').style = 'display: none'
+					document.getElementById('officer').style = 'display: block'
+
+					document.getElementById('volunteer-officer').value = 'display volunteer'
+					document.getElementById('volunteer-officer').innerHTML = 'click here for volunteer page'
+
+				} else {
+					document.getElementById('volunteer-officer').value = 'display officer'
+					document.getElementById('volunteer-officer').innerHTML = 'click here for officer page'
+
+					document.getElementById('volunteer').style = 'display: block'
+					document.getElementById('officer').style = 'display: none'
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<button id='volunteer-officer' value="display officer" onClick="javascript:changeDirectory()">click here for officer page</button>
+		<div id="volunteer" style="display:block">
+			<h1>  Please sign in with your student ID# </h1>
+			<input type="radio" name="volunteer-type" value="recycling" onchange="check()" checked="checked">recycling</input>
+			<input type="radio" name="volunteer-type" value="beautification" onchange="check()">park beautification</input>
+			Student ID: <input type="text" id='signin-textbox' /><br/>
+			<div id="recycling-control">
+				<button id='sign-in-recycling' onclick="javascript:status(true);">sign-in</button>
+				<button id='sign-out-recycling' onclick="javascript:status(false);">sign-out</button>
+			</div>
+			<div id="beautification-control" style="display: none">
+				Beautification Minute: <input type="text" id='minute-textbox' /><br/>
+	   		<button id='sign-in-beautification' onclick="javascript:status(true);">sign-in</button>
+	   </div>
+
+			<!--Student ID: <input type="text" id='signin-textbox' /><br/>
+			Beautification Minute: <input type="text" id='minute-textbox' /><br/>
+			<button id='sign-in' onclick="javascript:status(true);">sign-in</button>
+			<button id='sign-out' onclick="javascript:status(false);">sign-out</button> -->
+			<button id='volunteer-hours' value="show" onclick="javascript:getHours();">volunteer hours</button><br/>
+			<div>
+				<table id='hourstable' width="100%" border="1">
+					<thead>
+						<tr>
+							<th>volunteerType</th>
+							<th>date</th>
+							<th>minutes</th>
+						</tr>
+					</thead>
+					<tbody id="hourstable-body">
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div id="officer" style="display:none">
+			<button id='checkSignIn' onclick="javascript: ;">volunteers signed in</button><br/>
+			<button id='checkHours' onclick="javascript: ;">total volunteer hours</button><br/>
+		</div>
+	</body>
+</html>
