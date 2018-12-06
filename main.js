@@ -184,7 +184,31 @@ ipcMain.on('getHours', function(event, arg){
   }*/
 })
 
+ipcMain.on('signed-in-volunteers', function(event, arg){
+  let signedIn = `SELECT * FROM hours WHERE minute = 0`;
 
+  hoursdb.exec(signedIn, function (err, result) {
+    if (err) {
+      console.error(err)
+      throw err;
+    }
+
+    event.returnValue = result
+  })
+})
+
+ipcMain.on('find-total-hours', function(event, arg){
+  let signedIn = `SELECT * FROM hours`;
+
+  hoursdb.exec(signedIn, function (err, result) {
+    if (err) {
+      console.error(err)
+      throw err;
+    }
+
+    event.returnValue = result
+  })
+})
 // below is not needed
 /*
 ipcMain.on('sign in', function (event, arg) {

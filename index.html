@@ -54,14 +54,15 @@
 				//window.open('', 'Hours');
 				//table.style.width = '100%'
 				//table.setAttribute('border', '1')
-				var table = document.getElementById("hourstable-body")
+				var table = document.getElementById("hourstable")
+				var tBody = document.getElementById("hourstable-body")
 
 				if (document.getElementById('volunteer-hours').value == "show"){
 					const reply = ipcRenderer.sendSync('getHours', {"id" : document.getElementById('signin-textbox').value})
 					console.log(`reply.length ${reply.length}`)
 
 					var total = 0;
-					table.innerHTML = '';
+					tBody.innerHTML = '';
 					for(var rec of reply) {
 
 						minute = estimateHours(rec.minute)
@@ -83,7 +84,7 @@
 						row.appendChild(date)
 						row.appendChild(hours)
 
-						table.appendChild(row)
+						tBody.appendChild(row)
 
 
 					}
@@ -99,7 +100,7 @@
 					row.appendChild(nothing)
 					row.appendChild(totalNumber)
 
-					table.appendChild(row)
+					tBody.appendChild(row)
 
 					table.style="display:block"
 					document.getElementById('volunteer-hours').innerHTML = "close hours table"
@@ -139,6 +140,33 @@
 					document.getElementById('officer').style = 'display: none'
 				}
 			}
+
+			function checkSignIn() {
+				const reply = ipcRenderer.sendSync('signed-in-volunteers')
+
+
+
+			}
+
+			function checkTotalHours() {
+
+				const reply = ipcRenderer.sendSync('find-total-hours')
+
+				var total = 0;
+				var totalRecycling = 0
+				var totalBeautification = 0
+				for(var rec of reply) {
+					if(rec.project == "recycling") {
+						totalRecycling += estimateHours(rec.minute)
+					} else {
+						totalBeautification += estimateHours(rec.minute)
+					}
+				}
+				total = totalRecycling + totalBeautification
+
+				document.getElementById('total-hours').innerHTML = `total minutes of recycling = ${totalRecycling} <br/>
+					total minutes of beautification = ${totalBeautification} <br/> total minutes = ${total}`
+			}
 		</script>
 	</head>
 	<body>
@@ -163,7 +191,7 @@
 			<button id='sign-out' onclick="javascript:status(false);">sign-out</button> -->
 			<button id='volunteer-hours' value="show" onclick="javascript:getHours();">volunteer hours</button><br/>
 			<div>
-				<table id='hourstable' width="100%" border="1">
+				<table id='hourstable' width="100%" border="1" style="display: none">
 					<thead>
 						<tr>
 							<th>volunteerType</th>
@@ -177,8 +205,11 @@
 			</div>
 		</div>
 		<div id="officer" style="display:none">
-			<button id='checkSignIn' onclick="javascript: ;">volunteers signed in</button><br/>
-			<button id='checkHours' onclick="javascript: ;">total volunteer hours</button><br/>
+			<button id='checkSignIn' onclick="javascript:checkSignIn();">volunteers signed in</button><br/>
+			<button id='checkHours' onclick="javascript:checkTotalHours();">total volunteer hours</button><br/>
+			<span id='total-hours'>total minutes of recycling = <br/>
+				total minutes of beautification = <br/> total minutes = </span>
 		</div>
+
 	</body>
 </html>
