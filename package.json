@@ -13,5 +13,7 @@
     "node-sqlite-purejs": "0.0.2",
     "sqlite3": "^4.0.2"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "electron": "^3.0.10"
+  }
 }

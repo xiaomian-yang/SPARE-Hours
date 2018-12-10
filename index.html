@@ -36,19 +36,26 @@
 			}
 
 			function status(status) {
+				var reply = "";
 				var type = getVolunteerType();
+				
 				if (type == "recycling"){
-					const reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
+
+					reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
 						"id" : document.getElementById('signin-textbox').value, "status" : status})
 					console.log(reply)
 				} else if (type == "beautification") {
-					const reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
+					reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
 						"id" : document.getElementById('signin-textbox').value, "minute" : document.getElementById('minute-textbox').value})
 					console.log(reply)
 				}
+
+				alert(`${reply}`)
 			}
 
+			function volunteerSignIn() {
 
+			}
 
 			function getHours() {
 				//window.open('', 'Hours');
@@ -144,7 +151,46 @@
 			function checkSignIn() {
 				const reply = ipcRenderer.sendSync('signed-in-volunteers')
 
+				var table = document.getElementById("showSignedIn")
+				var tBody = document.getElementById("signedInID")
+				tBody.innerHTML = '';
+				if(document.getElementById("signed-in-block").value == "show") {
+					if(reply.length == 0) {
+						document.getElementById("all-signed-out").style= "display: block"
+					} else {
+						for(var rec of reply) {
+							var row = document.createElement("tr")
+							var id = document.createTextNode(`${rec.id}`)
+							row.appendChild(id)
+							tBody.appendChild(row)
+						}
 
+						table.style = "display: block"
+						document.getElementById("officerSignOut").style= "display:block"
+					}
+
+					document.getElementById("signed-in-block").value= "close"
+
+					document.getElementById("checkSignIn").innerHTML="close"
+				} else {
+					document.getElementById("all-signed-out").style= "display: none"
+					document.getElementById("showSignedIn").style= "display: none"
+					document.getElementById("officerSignOut").style= "display: none"
+
+					document.getElementById("signed-in-block").value= "show"
+					document.getElementById("checkSignIn").innerHTML="volunteers signed in"
+				}
+			}
+
+			function signOutAll() {
+				var type = getVolunteerType();
+
+				const reply1 = ipcRenderer.sendSync('signed-in-volunteers')
+
+				for(var rec of reply1) {
+					const reply = ipcRenderer.sendSync('message', {"type" : rec.project,
+						"id" : rec.id, "status" : false})
+				}
 
 			}
 
@@ -209,6 +255,19 @@
 			<button id='checkHours' onclick="javascript:checkTotalHours();">total volunteer hours</button><br/>
 			<span id='total-hours'>total minutes of recycling = <br/>
 				total minutes of beautification = <br/> total minutes = </span>
+			<div id="signed-in-block" value="show">
+				<span id='all-signed-out' style="display:none">all volunteers are signed out</span>
+				<table id="showSignedIn" width="100%" border="1" style="display: none">
+					<thead>
+						<tr>
+							<th>ID</th>
+						</tr>
+					</thead>
+					<tbody id="signedInID">
+					</tbody>
+				</table>
+				<button id="officerSignOut" onclick="javascript:signOutAll();" style="display:none">sign all volunteers out</button>
+			</div>
 		</div>
 
 	</body>
