@@ -19,6 +19,7 @@
 				alert(document.getElementById('signin-textbox').value);
 			}
 
+			// getting volunteer type: beautification or recycling
 			function getVolunteerType() {
 				var radios = document.getElementsByName('volunteer-type');
 
@@ -35,39 +36,41 @@
 				}
 			}
 
+			//main function for signing in or out volunteers
 			function status(status) {
 				var reply = "";
 				var type = getVolunteerType();
 				
 				if (type == "recycling"){
-
+					// send message for signing in or out for recycling
 					reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
 						"id" : document.getElementById('signin-textbox').value, "status" : status})
 					console.log(reply)
 				} else if (type == "beautification") {
+					// send message for signing in for beautification
 					reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
 						"id" : document.getElementById('signin-textbox').value, "minute" : document.getElementById('minute-textbox').value})
 					console.log(reply)
 				}
 
-				alert(`${reply}`)
+				alert(`${reply}`) //alert volunteer if signed in/out successfully
 			}
 
-			function volunteerSignIn() {
-
-			}
-
+			// function to get volunteer hours so volunteers can see their hours
 			function getHours() {
 				//window.open('', 'Hours');
 				//table.style.width = '100%'
 				//table.setAttribute('border', '1')
-				var table = document.getElementById("hourstable")
+				var table = document.getElementById("hourstable")		// creating the display hours table
 				var tBody = document.getElementById("hourstable-body")
 
 				if (document.getElementById('volunteer-hours').value == "show"){
+
+					//get minutes of all the times this volunteer signed in
 					const reply = ipcRenderer.sendSync('getHours', {"id" : document.getElementById('signin-textbox').value})
 					console.log(`reply.length ${reply.length}`)
 
+					//creating the volunteer minutes table
 					var total = 0;
 					tBody.innerHTML = '';
 					for(var rec of reply) {
@@ -95,6 +98,8 @@
 
 
 					}
+
+					//creating a row for total minutes after displaying all minutes
 					var row = document.createElement("tr")
 					var totalString = document.createElement("td")
 					totalString.appendChild(document.createTextNode("Total Minutes"))
@@ -109,6 +114,7 @@
 
 					tBody.appendChild(row)
 
+					//changing the button to display the table to close the table
 					table.style="display:block"
 					document.getElementById('volunteer-hours').innerHTML = "close hours table"
 					document.getElementById('volunteer-hours').value = "hide"
@@ -118,28 +124,29 @@
 					document.getElementById('volunteer-hours').value = "show"
 				}
 
-					for (var attr in rec) {
-	          console.log(`${attr}: ${rec[attr]}`)
-	        }
+				for (var attr in rec) {
+	          		console.log(`${attr}: ${rec[attr]}`)
+	        	}
 			}
 
-			function estimateHours(minute) {
+			function estimateHours(minute) {	//estimate volunteer minutes to nearest minutes
 			  return Math.round(minute)
 			}
 
-			function findDate(seconds) {
+			function findDate(seconds) {	//return a string for the date object that includes date and time of sign in
 				return new Date(seconds * 1000).toString().slice(0, 24)
 			}
 
+			//changing the app page for when it's volunteer or officer
 			function changeDirectory() {
-				if (document.getElementById('volunteer-officer').value == 'display officer') {
+				if (document.getElementById('volunteer-officer').value == 'display officer') { //displaying officer page
 					document.getElementById('volunteer').style = 'display: none'
 					document.getElementById('officer').style = 'display: block'
 
 					document.getElementById('volunteer-officer').value = 'display volunteer'
 					document.getElementById('volunteer-officer').innerHTML = 'click here for volunteer page'
 
-				} else {
+				} else { //displaying volunteer page
 					document.getElementById('volunteer-officer').value = 'display officer'
 					document.getElementById('volunteer-officer').innerHTML = 'click here for officer page'
 
@@ -148,16 +155,21 @@
 				}
 			}
 
+			//check which volunteers did not sign out at the end of the day
 			function checkSignIn() {
 				const reply = ipcRenderer.sendSync('signed-in-volunteers')
 
+				//making a table to display those volunteers
 				var table = document.getElementById("showSignedIn")
 				var tBody = document.getElementById("signedInID")
 				tBody.innerHTML = '';
+
+				//showing table of volunteers who did not sign out
 				if(document.getElementById("signed-in-block").value == "show") {
-					if(reply.length == 0) {
+					if(reply.length == 0) {	//all volunteers have signed out message
 						document.getElementById("all-signed-out").style= "display: block"
-					} else {
+					} 
+					else {	//display table of those who did not sign out
 						for(var rec of reply) {
 							var row = document.createElement("tr")
 							var id = document.createTextNode(`${rec.id}`)
@@ -172,7 +184,8 @@
 					document.getElementById("signed-in-block").value= "close"
 
 					document.getElementById("checkSignIn").innerHTML="close"
-				} else {
+				} 
+				else {	//closing the table
 					document.getElementById("all-signed-out").style= "display: none"
 					document.getElementById("showSignedIn").style= "display: none"
 					document.getElementById("officerSignOut").style= "display: none"
@@ -182,18 +195,20 @@
 				}
 			}
 
+			//signing out all volunteers
 			function signOutAll() {
 				var type = getVolunteerType();
 
-				const reply1 = ipcRenderer.sendSync('signed-in-volunteers')
+				const reply1 = ipcRenderer.sendSync('signed-in-volunteers')	//getting a list of volunteers who did not sign out
 
-				for(var rec of reply1) {
+				for(var rec of reply1) {	//signing out all volunteers by calling "message" 
 					const reply = ipcRenderer.sendSync('message', {"type" : rec.project,
 						"id" : rec.id, "status" : false})
 				}
 
 			}
 
+			// getting a total volunteer minutes of the semester onward
 			function checkTotalHours() {
 
 				const reply = ipcRenderer.sendSync('find-total-hours')
@@ -201,40 +216,43 @@
 				var total = 0;
 				var totalRecycling = 0
 				var totalBeautification = 0
-				for(var rec of reply) {
+				for(var rec of reply) {	//getting total minutes separately for recycling and beautification
 					if(rec.project == "recycling") {
 						totalRecycling += estimateHours(rec.minute)
 					} else {
 						totalBeautification += estimateHours(rec.minute)
 					}
 				}
-				total = totalRecycling + totalBeautification
+				total = totalRecycling + totalBeautification	//getting a total for volunteer hours
 
+				//changing the display to show total hours
 				document.getElementById('total-hours').innerHTML = `total minutes of recycling = ${totalRecycling} <br/>
 					total minutes of beautification = ${totalBeautification} <br/> total minutes = ${total}`
 			}
 		</script>
 	</head>
 	<body>
+		<!--button for changing volunteer or officer display page-->
 		<button id='volunteer-officer' value="display officer" onClick="javascript:changeDirectory()">click here for officer page</button>
+
+		<!--volunteer page-->
 		<div id="volunteer" style="display:block">
 			<h1>  Please sign in with your student ID# </h1>
 			<input type="radio" name="volunteer-type" value="recycling" onchange="check()" checked="checked">recycling</input>
 			<input type="radio" name="volunteer-type" value="beautification" onchange="check()">park beautification</input>
 			Student ID: <input type="text" id='signin-textbox' /><br/>
-			<div id="recycling-control">
+
+			<div id="recycling-control">	<!--recycling subpage-->
 				<button id='sign-in-recycling' onclick="javascript:status(true);">sign-in</button>
 				<button id='sign-out-recycling' onclick="javascript:status(false);">sign-out</button>
 			</div>
-			<div id="beautification-control" style="display: none">
-				Beautification Minute: <input type="text" id='minute-textbox' /><br/>
-	   		<button id='sign-in-beautification' onclick="javascript:status(true);">sign-in</button>
-	   </div>
 
-			<!--Student ID: <input type="text" id='signin-textbox' /><br/>
-			Beautification Minute: <input type="text" id='minute-textbox' /><br/>
-			<button id='sign-in' onclick="javascript:status(true);">sign-in</button>
-			<button id='sign-out' onclick="javascript:status(false);">sign-out</button> -->
+			<div id="beautification-control" style="display: none">	<!--beautification subpage-->
+				Beautification Minute: <input type="text" id='minute-textbox' /><br/>
+	   			<button id='sign-in-beautification' onclick="javascript:status(true);">sign-in</button>
+	   		</div>
+
+			<!--table to display volunteer hours-->
 			<button id='volunteer-hours' value="show" onclick="javascript:getHours();">volunteer hours</button><br/>
 			<div>
 				<table id='hourstable' width="100%" border="1" style="display: none">
@@ -250,13 +268,19 @@
 				</table>
 			</div>
 		</div>
+
+		<!--officer display page-->
 		<div id="officer" style="display:none">
 			<button id='checkSignIn' onclick="javascript:checkSignIn();">volunteers signed in</button><br/>
 			<button id='checkHours' onclick="javascript:checkTotalHours();">total volunteer hours</button><br/>
 			<span id='total-hours'>total minutes of recycling = <br/>
 				total minutes of beautification = <br/> total minutes = </span>
+			
+			<!--check if all volunteers are signed out, if not sign them out-->
 			<div id="signed-in-block" value="show">
 				<span id='all-signed-out' style="display:none">all volunteers are signed out</span>
+
+				<!--table for showing volunteer ids of those who are not signed in-->
 				<table id="showSignedIn" width="100%" border="1" style="display: none">
 					<thead>
 						<tr>
@@ -266,6 +290,8 @@
 					<tbody id="signedInID">
 					</tbody>
 				</table>
+
+				<!--button to sign out all volunteers-->
 				<button id="officerSignOut" onclick="javascript:signOutAll();" style="display:none">sign all volunteers out</button>
 			</div>
 		</div>

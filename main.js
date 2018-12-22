@@ -64,6 +64,8 @@ app.on('activate', function () {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
+
+// create hoursdb table for volunteer hours
 let hoursdb;
 function table_created(err, result) {
 	if (err) {
@@ -87,16 +89,18 @@ function db_opened(err, db) {
 	db.exec('CREATE TABLE hours(project text, id string, date text, minute integer)', table_created);
 }
 
-SQL.open('hours.db', {}, db_opened);
+SQL.open('hours.db', {}, db_opened); // open hoursdb
 
-
+// get message from function status(status) to sign in/out volunteers
 ipcMain.on('message', function (event, arg) {
 
-	var d = new Date();
+	var d = new Date(); //get current time of when the function is ran
 	console.log(arg)
+
+	// recycling sign in/out function
 	if (arg.type == "recycling") {
 		let signedIn = `SELECT * FROM hours WHERE minute = 0 AND id = "${arg.id}"`;
-		if (arg.status == false) {
+		if (arg.status == false) {	// signing out recycling volunteers
 
 			hoursdb.exec(signedIn,	function (err, result) {
 				if (err) {
@@ -104,20 +108,23 @@ ipcMain.on('message', function (event, arg) {
 					throw err;
 				}
 				console.log(signedIn)
-				if (result.length != 1) {
+				if (result.length != 1) {		//checking whether volunteer signed in once and did not sign out yet
 					console.error(`signin count ${result.length}`)
 					event.returnValue = "error: you have either not signed in or have already signed out."
 					return;
 				}
+
 				/*
 				for (var attr in result[0]) {
 					console.log(`${attr}: ${result[0][attr]}`)
 				}
 				*/
+				//console.log(`${result[0].date}`)
 
-				console.log(`${result[0].date}`)
 				var signedInTime = result[0].date
-				var newD = (d.getTime()/1000 - signedInTime)/60
+				var newD = (d.getTime()/1000 - signedInTime)/60		//finding the number of minutes recycling volunteers had done this day
+
+				//uploading volunteer minutes to hoursdb
 				hoursdb.exec(`UPDATE hours SET minute = "${newD}" WHERE minute = 0 AND id = "${arg.id}"`, function (err, result) {
 					if (err) {
 						console.error(err.message)
@@ -131,19 +138,19 @@ ipcMain.on('message', function (event, arg) {
 
 			})
 		} 
-		else {
+		else {		//signing in recycling volunteers
 			hoursdb.exec(signedIn, function (err, result) {
 				if (err){
 					console.error(err)
 					throw err;
 				}
 				console.log(signedIn)
-				if (result.length != 0) {
+				if (result.length != 0) {	//checking whether this is the first time the volunteer signed in today
 					console.error(`recycling signin count ${result.length}`)
 					event.returnValue = "error: you have already signed in."
 					//console.log(event.returnValue)
 					return;
-				} else {
+				} else {	//signing in recycling volunteer
 					hoursdb.exec(`INSERT INTO hours VALUES("${arg.type}", "${arg.id}", "${d.getTime()/1000}", 0)`, function (err, result) {
 						if (err) {
 							console.error(err.message)
@@ -158,22 +165,26 @@ ipcMain.on('message', function (event, arg) {
 			})		
 		}
 	}
-	else if (arg.type == "beautification") {
-		console.log(`beautification ${arg}`)
-		console.log(`sql INSERT INTO hours VALUES("${arg.type}", "${arg.id}", "${d}", ${arg.minute})`)
 
+	//signing in beautification volunteers
+	else if (arg.type == "beautification") {
+		//console.log(`beautification ${arg}`)
+		//console.log(`sql INSERT INTO hours VALUES("${arg.type}", "${arg.id}", "${d}", ${arg.minute})`)
+
+		//find if this person signed in the last 24 hours to prevent signing in extra hours
 		let signedIn = `SELECT * FROM hours WHERE id = "${arg.id}" AND date > ${d.getTime()/1000 - 24*60*60} `;
+
 		hoursdb.exec(signedIn, function (err, result) {
 			if (err) {
 				console.error(err)
 				throw err;
 			}
 
-			if (result.length != 0) {
+			if (result.length != 0) {	//error for when volunteers already signed in and is trying to sign in again
 				console.error(`signin count ${result.length}`)
 				event.returnValue = "error: you have already signed in."
 				return;
-			} else {
+			} else {	// signing in beautification volunteer
 				hoursdb.exec(`INSERT INTO hours VALUES("${arg.type}", "${arg.id}", "${d.getTime()/1000}", ${arg.minute})`, function (err, result) {
 					if (err) {
 						console.error(err)
@@ -197,7 +208,8 @@ ipcMain.on('message', function (event, arg) {
 
 })
 
-ipcMain.on('already-signed-in', function(event, arg){
+
+/*ipcMain.on('already-signed-in', function(event, arg){
 	let signedIn = `SELECT * FROM hours WHERE minute = 0 AND id = "${arg.id}"`
 
 	hoursdb.exec(signedIn,	function (err, result) {
@@ -211,8 +223,9 @@ ipcMain.on('already-signed-in', function(event, arg){
 		}
 		event.returnValue = result
 	})
-})
+})*/
 
+// getting volunteer hours for a specfic volunteer with an ID, message from getHours() function
 let hourswindow
 ipcMain.on('getHours', function(event, arg){
 	//hoursWindow = new BrowserWindow({width: 400, height: 400})
@@ -232,6 +245,7 @@ ipcMain.on('getHours', function(event, arg){
 	})
 })
 
+// get a list of volunteers who did not sign out at the end of the day for function checkSignIn()
 ipcMain.on('signed-in-volunteers', function(event, arg){
 				let signedIn = `SELECT * FROM hours WHERE minute = 0`;
 
@@ -245,6 +259,7 @@ ipcMain.on('signed-in-volunteers', function(event, arg){
 				})
 })
 
+// get total minutes of all volunteers for function checkTotalHours()
 ipcMain.on('find-total-hours', function(event, arg){
 	let signedIn = `SELECT * FROM hours`;
 
