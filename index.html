@@ -5,10 +5,10 @@
 			const {ipcRenderer} = require('electron');
 
 			function check() {
-				if (getVolunteerType() == "recycling") {
+				if (getVolunteerType("volunteer") == "recycling") {
 					document.getElementById('beautification-control').style = 'display: none'
 					document.getElementById('recycling-control').style = 'display: block'
-				} else if (getVolunteerType() == "beautification"){
+				} else if (getVolunteerType("volunteer") == "beautification"){
 					document.getElementById('beautification-control').style = 'display: block'
 					document.getElementById('recycling-control').style = 'display: none'
 				}
@@ -20,8 +20,13 @@
 			}
 
 			// getting volunteer type: beautification or recycling
-			function getVolunteerType() {
-				var radios = document.getElementsByName('volunteer-type');
+			function getVolunteerType(type) {
+				var radios;
+				if (type == "volunteer"){
+					radios = document.getElementsByName('volunteer-type');
+				} else if (type == "officer") {
+					radios = document.getElementsByName('officer-volunteer-type');
+				}
 
 				for (var i = 0, length = radios.length; i < length; i++)
 				{
@@ -39,16 +44,16 @@
 			//main function for signing in or out volunteers
 			function status(status) {
 				var reply = "";
-				var type = getVolunteerType();
+				var type = getVolunteerType("volunteer");
 				
 				if (type == "recycling"){
 					// send message for signing in or out for recycling
-					reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
+					reply = ipcRenderer.sendSync('message', {"type" : type,
 						"id" : document.getElementById('signin-textbox').value, "status" : status})
 					console.log(reply)
 				} else if (type == "beautification") {
 					// send message for signing in for beautification
-					reply = ipcRenderer.sendSync('message', {"type" : getVolunteerType(),
+					reply = ipcRenderer.sendSync('message', {"type" : type,
 						"id" : document.getElementById('signin-textbox').value, "minute" : document.getElementById('minute-textbox').value})
 					console.log(reply)
 				}
@@ -197,7 +202,7 @@
 
 			//signing out all volunteers
 			function signOutAll() {
-				var type = getVolunteerType();
+				var type = getVolunteerType("volunteer");
 
 				const reply1 = ipcRenderer.sendSync('signed-in-volunteers')	//getting a list of volunteers who did not sign out
 
@@ -228,6 +233,15 @@
 				//changing the display to show total hours
 				document.getElementById('total-hours').innerHTML = `total minutes of recycling = ${totalRecycling} <br/>
 					total minutes of beautification = ${totalBeautification} <br/> total minutes = ${total}`
+			}
+
+			//officers add hours for volunteers if they did not sign in
+			function lateSignIn() {
+				var type = getVolunteerType("officer");
+				reply = ipcRenderer.sendSync('add-hour', {"type" : type, "id" : document.getElementById('officer-signin-textbox').value, 
+					"time" : document.getElementById('day-time').value, "minutes" : document.getElementById('volunteer-minutes').value})
+
+				alert(`${reply}`);
 			}
 		</script>
 	</head>
@@ -293,6 +307,17 @@
 
 				<!--button to sign out all volunteers-->
 				<button id="officerSignOut" onclick="javascript:signOutAll();" style="display:none">sign all volunteers out</button>
+			</div>
+
+			<!--officers add hours for volunteers if they did not sign in-->
+			<div id="add-hours">
+				<br/>
+				<input type="radio" name="officer-volunteer-type" value="recycling" >recycling</input>
+				<input type="radio" name="officer-volunteer-type" value="beautification" >park beautification</input>
+				Student ID: <input type="text" id='officer-signin-textbox' /><br/>
+				Day and Time: <input type="datetime-local" id='day-time' />
+				minutes: <input type="text" id='volunteer-minutes' />
+				<button id='sign-in' onclick="javascript:lateSignIn();">done</button>
 			</div>
 		</div>
 

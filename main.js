@@ -86,10 +86,15 @@ function db_opened(err, db) {
 		console.log(`${attr}: ${hoursdb[attr]}`)
 	}
 	*/
-	db.exec('CREATE TABLE hours(project text, id string, date text, minute integer)', table_created);
+	db.exec('CREATE TABLE hours(project text, id string, date integer, minute integer)', table_created);
 }
 
 SQL.open('hours.db', {}, db_opened); // open hoursdb
+
+function execsql(db, stmt, fn) {
+	console.log("sql:" + stmt);
+	db.exec(stmt, fn);
+}
 
 // get message from function status(status) to sign in/out volunteers
 ipcMain.on('message', function (event, arg) {
@@ -125,7 +130,7 @@ ipcMain.on('message', function (event, arg) {
 				var newD = (d.getTime()/1000 - signedInTime)/60		//finding the number of minutes recycling volunteers had done this day
 
 				//uploading volunteer minutes to hoursdb
-				hoursdb.exec(`UPDATE hours SET minute = "${newD}" WHERE minute = 0 AND id = "${arg.id}"`, function (err, result) {
+				hoursdb.exec(`UPDATE hours SET minute = ${newD} WHERE minute = 0 AND id = "${arg.id}"`, function (err, result) {
 					if (err) {
 						console.error(err.message)
 						throw err;
@@ -151,7 +156,8 @@ ipcMain.on('message', function (event, arg) {
 					//console.log(event.returnValue)
 					return;
 				} else {	//signing in recycling volunteer
-					hoursdb.exec(`INSERT INTO hours VALUES("${arg.type}", "${arg.id}", "${d.getTime()/1000}", 0)`, function (err, result) {
+					execsql(hoursdb, `INSERT INTO hours VALUES("${arg.type}", "${arg.id}", ${d.getTime()/1000}, 0)`, function (err, result) {
+						
 						if (err) {
 							console.error(err.message)
 							throw err;
@@ -172,7 +178,7 @@ ipcMain.on('message', function (event, arg) {
 		//console.log(`sql INSERT INTO hours VALUES("${arg.type}", "${arg.id}", "${d}", ${arg.minute})`)
 
 		//find if this person signed in the last 24 hours to prevent signing in extra hours
-		let signedIn = `SELECT * FROM hours WHERE id = "${arg.id}" AND date > ${d.getTime()/1000 - 24*60*60} `;
+		let signedIn = `SELECT * FROM hours WHERE id = "${arg.id}" AND date > ${d.getTime()/1000 - 60} `;
 
 		hoursdb.exec(signedIn, function (err, result) {
 			if (err) {
@@ -185,7 +191,7 @@ ipcMain.on('message', function (event, arg) {
 				event.returnValue = "error: you have already signed in."
 				return;
 			} else {	// signing in beautification volunteer
-				hoursdb.exec(`INSERT INTO hours VALUES("${arg.type}", "${arg.id}", "${d.getTime()/1000}", ${arg.minute})`, function (err, result) {
+				execsql(hoursdb, `INSERT INTO hours VALUES("${arg.type}", "${arg.id}", ${d.getTime()/1000}, ${arg.minute})`, function (err, result) {
 					if (err) {
 						console.error(err)
 						throw err;
@@ -271,4 +277,18 @@ ipcMain.on('find-total-hours', function(event, arg){
 
 		event.returnValue = result
 	})
+})
+
+// officers add hours for volunteers who did not sign in for function lateSignIn()
+ipcMain.on('add-hour', function(event, arg){
+	var d = new Date(arg.time).getTime(); // make daytime-local into a date variable
+	execsql(hoursdb, `INSERT INTO hours VALUES("${arg.type}", "${arg.id}", ${d/1000}, ${arg.minutes})`, function (err, result) {
+		if (err) {
+			console.error(err.message)
+			throw err;
+		}
+	})
+
+	event.returnValue = "Added successfully."
+	return;
 })
